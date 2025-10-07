@@ -1,0 +1,5 @@
+{
+  "name": "Radio X - Web Player",
+  "description": "A functional prototype of a web page for a radio station using React. It includes a fixed audio player, album art display, song history, and sections for News and Paid Advertising.",
+  "requestFramePermissions": []
+}
