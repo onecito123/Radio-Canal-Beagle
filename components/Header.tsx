@@ -21,8 +21,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, setIsAuthenticated }) 
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Programación', path: '/schedule' },
-    { name: 'Podcasts', path: '/podcasts' },
-    { name: 'Noticias', path: '/news' },
+    { name: 'Noticias', path: '/local-news' },
     { name: 'Contacto', path: '/contact' },
   ];
 
@@ -43,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, setIsAuthenticated }) 
     Radio Canal Beagle
   </NavLink>
 </div>
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <div className="ml-10 flex items-baseline space-x-4">
               {navLinks.map((link) => (
                 <NavLink 
@@ -56,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, setIsAuthenticated }) 
               ))}
             </div>
           </div>
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-4">
              <button
               onClick={() => setPlaying(!playing)}
               className="flex items-center bg-danger hover:bg-danger-hover text-white font-bold py-2 px-4 rounded-full transition-transform duration-300 ease-in-out transform hover:scale-105"
@@ -83,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, setIsAuthenticated }) 
                 </NavLink>
             )}
           </div>
-          <div className="-mr-2 flex md:hidden">
+          <div className="-mr-2 flex lg:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-text-muted hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
@@ -96,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, setIsAuthenticated }) 
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => (
                <NavLink 

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { NewsArticle, Ad, Banner, BannerConfig } from '../types';
+import { Ad, Banner, BannerConfig, ScheduleItem, ScheduleConfig } from '../types';
 
 // IMPORTANTE: Para que la carga de imágenes funcione, debes:
 // 1. Crear un "Bucket" en el Storage de Supabase llamado "images".
@@ -157,63 +157,59 @@ export const updateBanner = async (newBanner: Partial<Banner>): Promise<BannerCo
 };
 
 
-// --- News API ---
-export const getNews = async (): Promise<NewsArticle[]> => {
+// --- Schedule API ---
+export const getSchedule = async (): Promise<ScheduleConfig> => {
     const { data, error } = await supabase
-        .from('news')
+        .from('schedule')
         .select('*')
-        .order('date', { ascending: false });
+        .order('id', { ascending: true });
 
-    handleSupabaseError(error, 'getNews');
-    return data || [];
+    // The Supabase client library might throw an error before hitting the DB if the table isn't in its schema cache.
+    // The error code '42P01' is for when the DB itself reports the table doesn't exist.
+    // We need to handle both cases gracefully by checking the error message as well.
+    if (error && (error.code === '42P01' || error.message.includes('does not exist') || error.message.includes('Could not find the table'))) {
+        console.warn("[RADIO APP] 'schedule' table not found. Feature will be disabled.");
+        return { schedule: [], tableExists: false };
+    }
+
+    handleSupabaseError(error, 'getSchedule');
+    return { schedule: data || [], tableExists: true };
 };
 
-export const getNewsById = async (id: number): Promise<NewsArticle> => {
+export const addScheduleItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>): Promise<ScheduleItem> => {
     const { data, error } = await supabase
-        .from('news')
-        .select('*')
-        .eq('id', id)
-        .single();
-    
-    handleSupabaseError(error, `getNewsById ${id}`);
-    if (!data) throw new Error("Article not found");
-    return data;
-};
-
-
-export const addNews = async (article: Omit<NewsArticle, 'id' | 'created_at'>): Promise<NewsArticle> => {
-    const { data, error } = await supabase
-        .from('news')
-        .insert([article])
+        .from('schedule')
+        .insert([item])
         .select()
         .single();
 
-    handleSupabaseError(error, 'addNews');
+    handleSupabaseError(error, 'addScheduleItem');
     return data;
 };
 
-export const updateNews = async (updatedArticle: NewsArticle): Promise<NewsArticle> => {
-    const { id, ...articleToUpdate } = updatedArticle;
+export const updateScheduleItem = async (updatedItem: ScheduleItem): Promise<ScheduleItem> => {
+    const { id, ...itemToUpdate } = updatedItem;
     const { data, error } = await supabase
-        .from('news')
-        .update(articleToUpdate)
+        .from('schedule')
+        .update(itemToUpdate)
         .eq('id', id)
         .select()
         .single();
         
-    handleSupabaseError(error, 'updateNews');
+    handleSupabaseError(error, 'updateScheduleItem');
     return data;
 };
 
-export const deleteNews = async (id: number): Promise<{ success: true }> => {
+export const deleteScheduleItem = async (id: number): Promise<{ success: true }> => {
     const { error } = await supabase
-        .from('news')
+        .from('schedule')
         .delete()
         .eq('id', id);
 
-    handleSupabaseError(error, 'deleteNews');
+    handleSupabaseError(error, 'deleteScheduleItem');
     return { success: true };
 };
+
 
 // --- Ads API ---
 export const getAds = async (): Promise<Ad[]> => {

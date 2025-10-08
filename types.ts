@@ -1,16 +1,8 @@
-export interface Song {
-  title: string;
-  artist: string;
-  time: string;
-}
-
-export interface NewsArticle {
+export interface ScheduleItem {
   id: number;
-  title: string;
-  image: string;
-  date: string;
-  summary: string;
-  content?: string;
+  day: string;
+  time: string;
+  program: string;
   created_at?: string;
 }
 
@@ -21,14 +13,6 @@ export interface Ad {
   url: string;
   text: string;
   created_at?: string;
-}
-
-export interface PodcastEpisode {
-    id: number;
-    title: string;
-    description: string;
-    duration: string;
-    audioUrl: string;
 }
 
 export interface Banner {
@@ -42,4 +26,20 @@ export interface Banner {
 export interface BannerConfig {
   banner: Banner;
   schemaIsOutdated: boolean;
+}
+
+export interface ScheduleConfig {
+  schedule: ScheduleItem[];
+  tableExists: boolean;
+}
+
+// Interfaz para los artículos de noticias parseados desde los feeds RSS
+export interface ParsedArticle {
+    title: string;
+    link: string;
+    description: string;
+    pubDate: string;
+    rawDate: Date;
+    image: string | null;
+    source: string;
 }

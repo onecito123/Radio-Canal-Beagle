@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePlayer } from '../context/PlayerContext';
-import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaHistory, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 
 interface AudioPlayerProps {
   radioURL: string;
@@ -9,26 +9,36 @@ interface AudioPlayerProps {
 // Enum para los estados de audio para mejorar la legibilidad y el mantenimiento
 type AudioStatus = 'playing' | 'paused' | 'loading' | 'error';
 
+const SoundWaveAnimation = () => (
+  <div className="flex items-end justify-center space-x-1 h-5 w-16" aria-label="Transmitiendo en vivo">
+    <span className="w-1.5 h-full bg-green-400 animate-wave" style={{ animationDelay: '0s' }}></span>
+    <span className="w-1.5 h-full bg-green-400 animate-wave" style={{ animationDelay: '0.2s' }}></span>
+    <span className="w-1.5 h-full bg-green-400 animate-wave" style={{ animationDelay: '0.4s' }}></span>
+    <span className="w-1.5 h-full bg-green-400 animate-wave" style={{ animationDelay: '0.6s' }}></span>
+  </div>
+);
+
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ radioURL }) => {
-  const { playing, setPlaying, showAlbumCover, animationActive, songMem, currentSong } = usePlayer();
+  const { playing, setPlaying, showAlbumCover, animationActive } = usePlayer();
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [status, setStatus] = useState<AudioStatus>('paused');
   
   // Ref para acceder al HTMLAudioElement directamente
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // --- Se ha eliminado la obtención de información de la canción ---
+  // La funcionalidad para mostrar el nombre de la canción y el artista ha sido
+  // eliminada según la solicitud del usuario para simplificar el reproductor.
+
   // Efecto para sincronizar el estado de reproducción global con el elemento de audio
   useEffect(() => {
     if (audioRef.current) {
       if (playing) {
-        // El método play() devuelve una promesa.
-        // Debemos manejarla para capturar errores como las restricciones de autoplay.
         audioRef.current.play().catch(error => {
           console.error("Error al intentar reproducir el audio:", error);
           setStatus('error');
-          setPlaying(false); // Revertir el estado si la reproducción falla
+          setPlaying(false);
         });
       } else {
         audioRef.current.pause();
@@ -69,17 +79,19 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ radioURL }) => {
   const renderStatus = () => {
     switch (status) {
       case 'playing':
-        return <span className="text-sm text-green-400">Transmitiendo...</span>;
+        return <SoundWaveAnimation />;
       case 'paused':
-        return <span className="text-sm text-text-muted">Pausado</span>;
+        return <span className="text-sm text-text-muted w-16 text-center">Pausado</span>;
       case 'loading':
-        return <span className="flex items-center text-sm text-yellow-400"><FaSpinner className="animate-spin mr-2" /> Cargando...</span>;
+        return <span className="flex items-center text-sm text-yellow-400 w-16"><FaSpinner className="animate-spin mr-2" /> Cargando</span>;
       case 'error':
-        return <span className="flex items-center text-sm text-red-500"><FaExclamationTriangle className="mr-2" /> Error</span>;
+        return <span className="flex items-center text-sm text-red-500 w-16"><FaExclamationTriangle className="mr-2" /> Error</span>;
       default:
-        return <span className="text-sm text-text-muted">Pausado</span>;
+        return <span className="text-sm text-text-muted w-16 text-center">Pausado</span>;
     }
   };
+  
+  const defaultAlbumArt = "https://play-lh.googleusercontent.com/kngWBW8qnRCBZoGyKrfX_7yJC0zPi3f-ukWEHSvtAN9MjJtPcvifs1JXyEqLUnLmcRca5lSk3GzLNLtC3V58isk";
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-surface shadow-[0_-5px_15px_rgba(0,0,0,0.2)] z-50 p-3 text-text-main">
@@ -96,14 +108,19 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ radioURL }) => {
         <div className="flex items-center space-x-4 min-w-0">
           {showAlbumCover && (
             <img 
-              src="https://play-lh.googleusercontent.com/kngWBW8qnRCBZoGyKrfX_7yJC0zPi3f-ukWEHSvtAN9MjJtPcvifs1JXyEqLUnLmcRca5lSk3GzLNLtC3V58isk" 
-              alt="Logo Radio Canal Beagle" 
+              src={defaultAlbumArt} 
+              alt="Logo Radio Canal Beagle"
               className={`w-16 h-16 rounded-md object-cover transition-opacity duration-500 ${animationActive ? 'opacity-100' : 'opacity-80'}`} 
             />
           )}
-          <div className="min-w-0 flex-1">
-            <p className="font-bold text-lg truncate" title={currentSong?.title}>{currentSong?.title || 'Radio Canal Beagle'}</p>
-            <p className="text-sm text-text-muted truncate" title={currentSong?.artist}>{currentSong?.artist || 'Sintonizando...'}</p>
+          {/* Texto visible en pantallas sm y superiores */}
+          <div className="hidden sm:block min-w-0 flex-1">
+            <p className="font-bold text-lg truncate" title="Radio Canal Beagle">Radio Canal Beagle</p>
+            <p className="text-sm text-text-muted truncate" title="En Vivo">En Vivo</p>
+          </div>
+           {/* Ecualizador visible solo en pantallas pequeñas (móviles) */}
+          <div className="sm:hidden">
+            {renderStatus()}
           </div>
         </div>
 
@@ -116,7 +133,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ radioURL }) => {
           >
             {status === 'loading' ? <FaSpinner className="animate-spin" /> : (playing ? <FaPause /> : <FaPlay />)}
           </button>
-          <div className="flex items-center space-x-2 w-32">
+          <div className="hidden lg:flex items-center space-x-2 w-32">
             <button onClick={toggleMute} aria-label={muted ? "Quitar silencio" : "Silenciar"}>
               {muted || volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
             </button>
@@ -132,28 +149,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ radioURL }) => {
           </div>
         </div>
 
-        <div className="relative flex items-center space-x-4">
-          {renderStatus()}
-          <button onClick={() => setShowHistory(!showHistory)} className="text-2xl text-text-muted hover:text-text-main" aria-label="Ver historial de canciones">
-            <FaHistory />
-          </button>
-          {showHistory && (
-            <div className="absolute bottom-full right-0 mb-2 w-72 bg-background p-4 rounded-lg shadow-lg border border-gray-700">
-              <h4 className="font-bold mb-2 border-b border-gray-600 pb-1">Historial Reciente</h4>
-              <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
-                {songMem.length > 0 ? (
-                  songMem.map((song, index) => (
-                    <li key={index}>
-                      <p className="font-semibold">{song.title}</p>
-                      <p className="text-text-muted text-xs">{song.artist} - <time>{song.time.split(' ')[1]}</time></p>
-                    </li>
-                  ))
-                ) : (
-                  <li>No hay historial disponible.</li>
-                )}
-              </ul>
-            </div>
-          )}
+        <div className="flex items-center">
+           {/* Ecualizador visible en pantallas sm y superiores */}
+          <div className="hidden sm:block">{renderStatus()}</div>
         </div>
       </div>
     </div>

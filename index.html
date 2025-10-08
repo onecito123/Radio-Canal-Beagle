@@ -26,6 +26,15 @@
               'text-main': '#EDF2F7',   // Blanco Suave (Texto principal)
               'text-muted': '#A0AEC0',  // Gris Claro (Texto secundario)
             },
+            keyframes: {
+              wave: {
+                '0%, 100%': { transform: 'scaleY(0.2)' },
+                '50%': { transform: 'scaleY(1.0)' },
+              },
+            },
+            animation: {
+              wave: 'wave 1.2s ease-in-out infinite',
+            },
           },
         },
       }
@@ -49,6 +58,5 @@
     <div id="root"></div>
     <!-- Changed script for Babel transpilation. data-presets enables TSX/JSX. Path is now relative. -->
     <script type="text/babel" data-presets="react,typescript" src="./index.tsx"></script>
-    <script type="text/javascript" src="//ecdn.onlineradiobox.com/js/plwidget.min.a1649ec0.js"></script>
   </body>
 </html>

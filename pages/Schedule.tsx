@@ -1,18 +1,11 @@
-
 import React from 'react';
+import { ScheduleItem } from '../types';
 
-const scheduleData = [
-  { day: 'Lunes', time: '10:00 - 12:00', program: 'Mañana Musical' },
-  { day: 'Lunes', time: '12:00 - 14:00', program: 'Noticias del Mediodía' },
-  { day: 'Lunes', time: '14:00 - 17:00', program: 'Tarde de Éxitos' },
-  { day: 'Martes', time: '10:00 - 12:00', program: 'Mañana Musical' },
-  { day: 'Martes', time: '12:00 - 14:00', program: 'Noticias del Mediodía' },
-  { day: 'Miércoles', time: '10:00 - 12:00', program: 'Clásicos del Rock' },
-  { day: 'Jueves', time: '18:00 - 20:00', program: 'Noche de Jazz' },
-  { day: 'Viernes', time: '20:00 - 23:00', program: 'Fiesta de Fin de Semana' },
-];
+interface ScheduleProps {
+  scheduleData: ScheduleItem[];
+}
 
-const Schedule: React.FC = () => {
+const Schedule: React.FC<ScheduleProps> = ({ scheduleData }) => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold text-center mb-12">Nuestra Programación</h1>
@@ -26,13 +19,19 @@ const Schedule: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
-            {scheduleData.map((item, index) => (
-              <tr key={index} className="hover:bg-background transition-colors">
+            {scheduleData.length > 0 ? scheduleData.map((item, index) => (
+              <tr key={item.id || index} className="hover:bg-background transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-text-main">{item.day}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-text-muted">{item.time}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-primary font-semibold">{item.program}</td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={3} className="text-center py-8 text-text-muted">
+                  La programación no está disponible en este momento.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

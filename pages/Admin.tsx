@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { NewsArticle, Ad, Banner } from '../types';
+import { Ad, Banner, ScheduleItem } from '../types';
 import * as api from '../services/api';
 import { FaEdit, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
-import ImageUploader from '../components/ImageUploader'; // Importar el nuevo componente
+import ImageUploader from '../components/ImageUploader';
 
 interface AdminProps {
     banner: Banner;
     schemaIsOutdated: boolean;
     updateBanner: (settings: Partial<Banner>) => Promise<void>;
-    newsData: NewsArticle[];
-    addNewsArticle: (article: Omit<NewsArticle, 'id'>) => Promise<void>;
-    editNewsArticle: (article: NewsArticle) => Promise<void>;
-    deleteNewsArticle: (id: number) => Promise<void>;
+    scheduleData: ScheduleItem[];
+    scheduleTableExists: boolean;
+    addScheduleItem: (item: Omit<ScheduleItem, 'id'>) => Promise<void>;
+    editScheduleItem: (item: ScheduleItem) => Promise<void>;
+    deleteScheduleItem: (id: number) => Promise<void>;
     adsData: Ad[];
     addAd: (ad: Omit<Ad, 'id'>) => Promise<void>;
     editAd: (ad: Ad) => Promise<void>;
@@ -20,7 +21,7 @@ interface AdminProps {
 
 const Admin: React.FC<AdminProps> = ({
     banner, schemaIsOutdated, updateBanner,
-    newsData, addNewsArticle, editNewsArticle, deleteNewsArticle,
+    scheduleData, scheduleTableExists, addScheduleItem, editScheduleItem, deleteScheduleItem,
     adsData, addAd, editAd, deleteAd
 }) => {
     // General Status
@@ -34,9 +35,9 @@ const Admin: React.FC<AdminProps> = ({
     const [secondaryBannerVisible, setSecondaryBannerVisible] = useState(banner.secondary_banner_visible);
     const [secondaryBannerImgSource, setSecondaryBannerImgSource] = useState<File | string | null>(banner.secondary_banner_image);
 
-    // News State
-    const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
-    const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
+    // Schedule State
+    const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
     // Ad State
     const [editingAd, setEditingAd] = useState<Ad | null>(null);
@@ -91,37 +92,37 @@ const Admin: React.FC<AdminProps> = ({
         }
     };
 
-    // --- News Handlers ---
-    const handleOpenNewsModal = (news: NewsArticle | null) => {
-        setEditingNews(news);
-        setIsNewsModalOpen(true);
+    // --- Schedule Handlers ---
+    const handleOpenScheduleModal = (item: ScheduleItem | null) => {
+        setEditingSchedule(item);
+        setIsScheduleModalOpen(true);
     };
 
-    const handleSaveNews = async (newsToSave: NewsArticle) => {
+    const handleSaveSchedule = async (itemToSave: ScheduleItem) => {
         try {
-            if (newsToSave.id) {
-                await editNewsArticle(newsToSave);
-                setStatus('Noticia actualizada con éxito!');
+            if (itemToSave.id) {
+                await editScheduleItem(itemToSave);
+                setStatus('Programa actualizado con éxito!');
             } else {
-                await addNewsArticle(newsToSave);
-                setStatus('Noticia agregada con éxito!');
+                await addScheduleItem(itemToSave);
+                setStatus('Programa agregado con éxito!');
             }
-            setIsNewsModalOpen(false);
+            setIsScheduleModalOpen(false);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
-            console.error("Error saving news:", errorMessage);
-            alert(`Error al guardar la noticia:\n\n${errorMessage}`);
-            throw error; // Relanzar para que el modal sepa que hubo un error
+            console.error("Error saving schedule item:", errorMessage);
+            alert(`Error al guardar el programa:\n\n${errorMessage}`);
+            throw error;
         }
     };
-    
-    const handleDeleteNews = async (id: number) => {
-        if(window.confirm('¿Estás seguro de que quieres eliminar esta noticia?')) {
-            await deleteNewsArticle(id);
-            setStatus('Noticia eliminada con éxito.');
+
+    const handleDeleteSchedule = async (id: number) => {
+        if(window.confirm('¿Estás seguro de que quieres eliminar este programa?')) {
+            await deleteScheduleItem(id);
+            setStatus('Programa eliminado con éxito.');
         }
     };
-    
+
     // --- Ad Handlers ---
     const handleOpenAdModal = (ad: Ad | null) => {
         setEditingAd(ad);
@@ -212,14 +213,42 @@ const Admin: React.FC<AdminProps> = ({
                     </form>
                 </AdminSection>
 
-                {/* News Section */}
-                <AdminSection title="Gestión de Noticias" buttonText="Agregar Noticia" onButtonClick={() => handleOpenNewsModal(null)}>
-                    <div className="space-y-4">
-                        {newsData.map(news => (
-                            <ListItem key={news.id} title={news.title} subtitle={news.summary} onEdit={() => handleOpenNewsModal(news)} onDelete={() => handleDeleteNews(news.id)} />
-                        ))}
-                    </div>
+                {/* Schedule Section */}
+                <AdminSection title="Gestión de Programación" buttonText={scheduleTableExists ? "Agregar Programa" : undefined} onButtonClick={scheduleTableExists ? () => handleOpenScheduleModal(null) : undefined}>
+                    {scheduleTableExists ? (
+                        <div className="space-y-4">
+                            {scheduleData.length > 0 ? scheduleData.map(item => (
+                                <ListItem key={item.id} title={item.program} subtitle={`${item.day} - ${item.time}`} onEdit={() => handleOpenScheduleModal(item)} onDelete={() => handleDeleteSchedule(item.id)} />
+                            )) : (
+                                <p className="text-text-muted text-center py-4">No hay programas para mostrar. ¡Agrega el primero!</p>
+                            )}
+                        </div>
+                    ) : (
+                        <CreateTableWarning
+                            featureName="la gestión de la programación"
+                            tableName="schedule"
+                            sqlScript={`CREATE TABLE public.schedule (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  day TEXT NOT NULL,
+  time TEXT NOT NULL,
+  program TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.schedule ENABLE ROW LEVEL SECURITY;
+
+-- Política para permitir la lectura pública
+CREATE POLICY "Enable read access for all users"
+ON public.schedule FOR SELECT USING (true);
+
+-- Política para permitir todas las acciones a usuarios anónimos (para este prototipo)
+CREATE POLICY "Enable all actions for anonymous users"
+ON public.schedule FOR ALL USING (true) WITH CHECK (true);`}
+                        />
+                    )}
                 </AdminSection>
+
 
                 {/* Ads Section */}
                 <AdminSection title="Gestión de Anuncios" buttonText="Agregar Anuncio" onButtonClick={() => handleOpenAdModal(null)}>
@@ -232,7 +261,7 @@ const Admin: React.FC<AdminProps> = ({
             </div>
             
             {/* Modals */}
-            {isNewsModalOpen && <NewsEditModal news={editingNews} onSave={handleSaveNews} onClose={() => setIsNewsModalOpen(false)} />}
+            {isScheduleModalOpen && <ScheduleEditModal scheduleItem={editingSchedule} onSave={handleSaveSchedule} onClose={() => setIsScheduleModalOpen(false)} />}
             {isAdModalOpen && <AdEditModal ad={editingAd} onSave={handleSaveAd} onClose={() => setIsAdModalOpen(false)} />}
         </div>
     );
@@ -246,6 +275,17 @@ const SchemaWarning: React.FC = () => (
         <p className="text-sm mt-2">La base de datos no está actualizada para gestionar todas las funciones. Para habilitarlas, ejecuta el siguiente código en el Editor SQL de Supabase:</p>
         <code className="block bg-background text-text-main font-mono text-xs p-3 rounded-md mt-4 whitespace-pre-wrap">
             {'-- Agrega campos para el banner secundario\nALTER TABLE public.banner\nADD COLUMN secondary_banner_visible BOOLEAN DEFAULT false;\n\nALTER TABLE public.banner\nADD COLUMN secondary_banner_image TEXT;\n\n-- Agrega campo para la URL de la radio\nALTER TABLE public.banner\nADD COLUMN radio_url TEXT;'}
+        </code>
+        <p className="text-sm mt-3">Después de ejecutar el código, recarga esta página.</p>
+    </div>
+);
+
+const CreateTableWarning: React.FC<{featureName: string, tableName: string, sqlScript: string}> = ({featureName, tableName, sqlScript}) => (
+    <div className="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 rounded-r-lg" role="alert">
+        <p className="font-bold">¡Función Deshabilitada!</p>
+        <p className="text-sm mt-2">La tabla <code className="font-mono text-sm bg-background px-1 rounded">{tableName}</code> no existe en la base de datos. Para habilitar {featureName}, ejecuta el siguiente código en el Editor SQL de tu proyecto de Supabase:</p>
+        <code className="block bg-background text-text-main font-mono text-xs p-3 rounded-md mt-4 whitespace-pre-wrap">
+            {sqlScript}
         </code>
         <p className="text-sm mt-3">Después de ejecutar el código, recarga esta página.</p>
     </div>
@@ -301,14 +341,13 @@ const Modal: React.FC<{title: string, children: React.ReactNode, onClose: () => 
     </div>
 );
 
-const NewsEditModal: React.FC<{news: NewsArticle | null, onSave: (news: NewsArticle) => Promise<void>, onClose: () => void}> = ({ news, onSave, onClose }) => {
-    const [formData, setFormData] = useState<Omit<NewsArticle, 'id'> & { id?: number }>(
-        news || { title: '', summary: '', content: '', image: '', date: new Date().toISOString().split('T')[0]}
+const ScheduleEditModal: React.FC<{scheduleItem: ScheduleItem | null, onSave: (item: ScheduleItem) => Promise<void>, onClose: () => void}> = ({ scheduleItem, onSave, onClose }) => {
+    const [formData, setFormData] = useState<Omit<ScheduleItem, 'id'> & { id?: number }>(
+        scheduleItem || { day: 'Lunes', time: '', program: '' }
     );
-    const [imageSource, setImageSource] = useState<File | string | null>(news?.image || null);
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
@@ -316,33 +355,29 @@ const NewsEditModal: React.FC<{news: NewsArticle | null, onSave: (news: NewsArti
         e.preventDefault();
         setIsSaving(true);
         try {
-            let imageUrl = formData.image;
-            if (imageSource) {
-                 if (imageSource instanceof File) {
-                    imageUrl = await api.uploadImage(imageSource);
-                } else {
-                    imageUrl = imageSource;
-                }
-            }
-            if (!imageUrl) {
-                alert("Por favor, selecciona una imagen para la noticia.");
-                setIsSaving(false);
-                return;
-            }
-            await onSave({ ...formData, image: imageUrl } as NewsArticle);
+            await onSave(formData as ScheduleItem);
         } catch (error) {
-            // Error is already alerted in the parent, just stop loading
             setIsSaving(false);
         }
     };
 
     return (
-        <Modal title={news ? 'Editar Noticia' : 'Agregar Noticia'} onClose={onClose}>
+        <Modal title={scheduleItem ? 'Editar Programa' : 'Agregar Programa'} onClose={onClose}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <input name="title" placeholder="Título" value={formData.title} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" required />
-                <textarea name="summary" placeholder="Resumen" value={formData.summary} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" rows={3} required></textarea>
-                <textarea name="content" placeholder="Contenido completo" value={formData.content || ''} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" rows={6}></textarea>
-                <ImageUploader label="Imagen de la Noticia" onImageChange={setImageSource} initialImageUrl={formData.image} />
+                 <div>
+                    <label htmlFor="day" className="block text-sm font-medium text-text-muted mb-1">Día</label>
+                    <select name="day" id="day" value={formData.day} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" required>
+                        <option>Lunes</option>
+                        <option>Martes</option>
+                        <option>Miércoles</option>
+                        <option>Jueves</option>
+                        <option>Viernes</option>
+                        <option>Sábado</option>
+                        <option>Domingo</option>
+                    </select>
+                </div>
+                <input name="time" placeholder="Horario (ej. 10:00 - 12:00)" value={formData.time} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" required />
+                <input name="program" placeholder="Nombre del Programa" value={formData.program} onChange={handleChange} className="w-full bg-background border border-gray-600 rounded-md py-2 px-3" required />
                 <div className="flex justify-end space-x-4 pt-4">
                     <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-full" disabled={isSaving}>Cancelar</button>
                     <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-6 rounded-full flex items-center justify-center w-32" disabled={isSaving}>
@@ -353,6 +388,7 @@ const NewsEditModal: React.FC<{news: NewsArticle | null, onSave: (news: NewsArti
         </Modal>
     );
 };
+
 
 const AdEditModal: React.FC<{ad: Ad | null, onSave: (ad: Ad) => Promise<void>, onClose: () => void}> = ({ ad, onSave, onClose }) => {
     const [formData, setFormData] = useState<Omit<Ad, 'id'> & { id?: number }>(
